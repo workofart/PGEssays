@@ -12,3 +12,4 @@ I only made small changes to stay up-to-date with the website's html format.
 - urllib2
 -  genshi
 - beautifulsoup4
+- pytidylib
