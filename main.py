@@ -9,6 +9,16 @@ This script requires python-epub-library: http://code.google.com/p/python-epub-b
 
 import re, ez_epub, urllib2, genshi
 from bs4 import BeautifulSoup
+from tidylib import tidy_fragment
+tidy_fragment.BASE_OPTIONS = {
+    "output-xhtml": 1,     # XHTML instead of HTML4
+    "indent": 0,           # Pretty; not too much of a performance hit
+    "tidy-mark": 0,        # No tidy meta tag in output
+    "wrap": 0,             # No wrapping
+    "alt-text": "",        # Help ensure validation
+    "doctype": 'strict',   # Little sense in transitional for tool-generated markup...
+    "force-output": 1,     # May not get what you expect but you will get something
+    }
 
 def addSection(link, title):
     if not 'http' in link:
@@ -25,9 +35,9 @@ def addSection(link, title):
 
         if not 'http' in link:
             if len(soup.findAll('table', {'width':'435'})) != 0:
-                font = str(soup.findAll('table', {'width':'435'})[0].findAll('font')[0])
+                font = str(soup.findAll('table', {'width':'435'})[0].findAll('font')[0]).strip("<font face=\"verdana\" size=\"2\">")
             elif len(soup.findAll('table', {'width':'374'})) != 0:
-                font = str(soup.findAll('table', {'width':'374'})[0].findAll('font')[0])
+                font = str(soup.findAll('table', {'width':'374'})[0].findAll('font')[0]).strip("<font face=\"verdana\" size=\"2\">")
             if not 'Get funded by' in font and not 'Watch how this essay was' in font and not 'Like to build things?' in font and not len(font)<100:
                 content = font
             else:
@@ -35,14 +45,21 @@ def addSection(link, title):
                 for par in soup.findAll('p'):
                     content += str(par)
             for p in content.decode('utf-8').split("<br/><br/>"):
+                p, error = tidy_fragment(p)
+                if p == '</':
+                    continue
+                if p.__contains__("<xa"):
+                    p = p.replace("<xa", "<a")
                 section.text.append(genshi.core.Markup(p))
         else:
             for p in str(page).replace("\n","<br/>").split("<br/><br/>"):
+                p, error = tidy_fragment(p)
+                if p.__contains__("<xa"):
+                    p = p.replace("<xa", "<a")
                 section.text.append(genshi.core.Markup(p))
     except Exception, e:
         print str(e)
         pass
-
     return section
 
 
